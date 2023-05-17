@@ -1,0 +1,79 @@
+---
+title: "song_data_regression"
+output: html_document
+date: "2023-05-14"
+---
+
+# DESCRIPTION OF THE DATABASE
+
+# LOAD THE DATASET
+
+```{r}
+df <- read.csv('song_data.csv')
+head(df)
+```
+
+
+
+# CLEAN THE DATA
+
+We need to check for duplicate and remove them
+
+```{r}
+# Load necessary library
+library(dplyr)
+
+# Identify the number of duplicate rows
+num_duplicates <- df %>% 
+  duplicated() %>% 
+  sum()
+
+# Remove the duplicate rows
+df_unique <- df %>% 
+  distinct()
+
+# Print the number of duplicate rows that were removed
+cat("Removed", num_duplicates, "duplicate rows.\n")
+
+
+
+duplicates <- df_unique %>% 
+  duplicated()
+sum(duplicates == TRUE)
+
+df <- df_unique
+```
+
+
+# 1. Describe the variable song_popularity
+
+```{r}
+summary(df$song_popularity)
+```
+
+
+```{r}
+shapiro.test(df$song_popularity)
+```
+
+The Shapiro.test in R cannot be performed with more than 5000 observations. This is due to the fact that the function developer want to prevent the user to using the test in order to derive conclusions in the case of such large dataset. The reason for this choice is that the shapiro test is not the most suitable solution when n gets very large (add why).
+
+```{r}
+ggqqplot(df$song_popularity)
+```
+
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+ggdensity(df, x = 'song_popularity')
+```
+
+```{r}
+for (x in colnames(sub_df)){
+  ggdensity(sub_df, aes(x = x))
+}
+```
+
+
+
