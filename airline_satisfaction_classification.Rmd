@@ -1,0 +1,83 @@
+---
+title: "AIRLINE PASSENGERS SATISFACTION: CLASSIFICATION"
+output: html_notebook
+date: 11/09/2001
+---
+
+## Database description
+[...]
+
+## Variable description
+[...]
+
+# OUTLINE 
+1. Data upload
+2. Exploratory analysis:
+    - check for missing values
+    - outliers analysis
+    - variables density
+    - customer satisfaction distribution for categorical variables
+    - customer satisfaction distribution for continuous variables
+    - correlation matrix
+3. Train and test sets split
+4. Logistic regression:
+    - general logistic model
+    - forward step-wise models analysis
+    - cross-validation
+    - models comparison based on R-squared, CV error, CP
+    - models selection (maybe one model per criteria if they differs)
+    - models evaluation (accuracy, specificity, sensitivity, ...)
+    - ROC curve
+5. Linear Discriminant Analysis:
+    - ...
+    - compare LDA and logistic
+6. Tree predictors:
+    - ...
+    - comparison with logistic model
+7. Conclusion and Interpretation
+
+
+## Libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(grid)
+library(corrr)
+```
+
+
+# 1) DATA
+```{r}
+df <- read_csv("Database/airline_passenger_satisfaction.csv")
+```
+
+```{r}
+head(df)
+```
+
+### Dataset structure
+```{r}
+str(df)
+```
+
+# 2) EXPLANATORY ANALYSIS
+
+## Check for missing values
+```{r}
+# Count NA values for each column
+na_counts <- sapply(df, function(x) sum(is.na(x)))
+
+
+# Calculate percentage of NA values for each column
+na_percentage <- na_counts / nrow(df) * 100
+
+# Create a data frame with column names, NA counts, and percentages
+na_table <- data.frame(Column = names(na_counts), NA_Count = na_counts, Percentage = na_percentage)
+
+# Display the result table
+na_table
+```
+
+  
+
