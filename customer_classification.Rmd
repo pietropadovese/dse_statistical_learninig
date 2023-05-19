@@ -1,0 +1,31 @@
+---
+title: "customer_classificiation"
+output: html_document
+date: "2023-05-19"
+---
+
+
+```{r}
+df <- read.csv('dataset\\Invistico_Airline.csv')
+dim(df)
+```
+
+```{r}
+na_count = sum(is.na(df))
+df <- na.omit(df)
+cat('number of rows removed:', na_count)
+```
+
+
+```{r}
+sapply(df,function(x) sum(is.na(x)))
+sapply(df, function(x) length(unique(x)))
+```
+
+```{r}
+library(ggplot2)
+p = ggplot(df, aes(x = Checkin.service)) +
+  geom_bar(aes(fill = satisfaction))
+p
+```
+
