@@ -1,26 +1,50 @@
 ---
 title: "AIRLINE PASSENGERS SATISFACTION: CLASSIFICATION"
 output: html_notebook
-date: 11/09/2001
+date: 16/06/2023
 ---
 
 ## Database description
-[...]
+The following database contains information about airline customers, the flight they took and the results of a satisfaction questionnaire about their flight experience.
+The goal of our analysis is trying to predict whether customers were overall satisfied or not of their flight experience.
 
 ## Variable description
-[...]
+* ...1: Index column
+* Gender: Refers to the gender of the customer, either male or female.
+* Customer Type: Indicates whether the customer is a loyal customer (someone who frequently chooses the same airline or company) or a disloyal customer (someone who doesn't consistently choose the same airline or company).
+* Age: Represents the age of the customer.
+* Type of Travel: Specifies the purpose of the customer's travel, such as personal travel or business travel.
+* Customer Class: Indicates the class or category in which the customer traveled, such as Economy Plus or Business.
+* Flight Distance: Represents the distance traveled by the customer's flight.
+* Inflight Wi-Fi Service: Rates the satisfaction level of the customer with the inflight Wi-Fi service on a scale of 0 to 5.
+* Departure/Arrival Time Convenience: Rates the satisfaction level of the customer with the convenience of departure and arrival times on a scale of 0 to 5.
+* Ease of Online Booking: Rates the satisfaction level of the customer with the ease of booking flights online on a scale of 0 to 5.
+* Gate Location: Rates the satisfaction level of the customer with the gate location at the airport on a scale of 0 to 5.
+* Food and Drink: Rates the satisfaction level of the customer with the quality of food and drink provided on the flight on a scale of 0 to 5.
+* Online Boarding: Rates the satisfaction level of the customer with the online boarding process on a scale of 0 to 5.
+* Seat Comfort: Rates the satisfaction level of the customer with the comfort of the seats on the flight on a scale of 0 to 5.
+* Inflight Entertainment: Rates the satisfaction level of the customer with the inflight entertainment options on a scale of 0 to 5.
+* Onboard Service: Rates the satisfaction level of the customer with the service provided by the flight crew on a scale of 0 to 5.
+* Leg Room Service: Rates the satisfaction level of the customer with the legroom space on the flight on a scale of 0 to 5.
+* Baggage Handling: Rates the satisfaction level of the customer with the handling of baggage by the airline on a scale of 1 to 5.
+* Check-in Service: Rates the satisfaction level of the customer with the check-in service at the airport on a scale of 0 to 5.
+* Inflight Service: Rates the satisfaction level of the customer with the overall inflight service on a scale of 0 to 5.
+* Cleanliness: Rates the satisfaction level of the customer with the cleanliness of the aircraft on a scale of 0 to 5.
+* Departure Delay in Minutes: Specifies the number of minutes of departure delay experienced by the customer.
+* Arrival Delay in Minutes: Specifies the number of minutes of arrival delay experienced by the customer.
+* Satisfaction: Represents the overall satisfaction level of the customer with their travel experience, categorized as either "satisfied" or "neutral or dissatisfied"
 
 # OUTLINE 
-1. Data upload
-2. Exploratory analysis:
-    - check for missing values
+1. **Data upload**
+2. **Exploratory analysis:**
+    - missing values handling
     - outliers analysis
     - variables density
     - customer satisfaction distribution for categorical variables
     - customer satisfaction distribution for continuous variables
     - correlation matrix
-3. Train and test sets split
-4. Logistic regression:
+3. **Train and test sets split**
+4. **Logistic regression:**
     - general logistic model
     - forward step-wise models analysis
     - cross-validation
@@ -28,13 +52,13 @@ date: 11/09/2001
     - models selection (maybe one model per criteria if they differs)
     - models evaluation (accuracy, specificity, sensitivity, ...)
     - ROC curve
-5. Linear Discriminant Analysis:
+5. **Linear Discriminant Analysis:**
     - ...
     - compare LDA and logistic
-6. Tree predictors:
+6. **Tree predictors:**
     - ...
     - comparison with logistic model
-7. Conclusion and Interpretation
+7. **Conclusion and Interpretation**
 
 
 ## Libraries
@@ -61,23 +85,170 @@ head(df)
 str(df)
 ```
 
+
+```{r}
+summary(df)
+# All the customer-generated variables are on a scales from 0 to 5 except for baggage handling that is on a scale from 1 to 5.
+```
+
+
+
+
 # 2) EXPLANATORY ANALYSIS
 
-## Check for missing values
+## Handling missing values
 ```{r}
-# Count NA values for each column
+# Function that counts NA values for each column
 na_counts <- sapply(df, function(x) sum(is.na(x)))
 
 
-# Calculate percentage of NA values for each column
+# Calculate the percentage of NA values for each column
 na_percentage <- na_counts / nrow(df) * 100
 
-# Create a data frame with column names, NA counts, and percentages
-na_table <- data.frame(Column = names(na_counts), NA_Count = na_counts, Percentage = na_percentage)
+# Display a table with NA counts and percentages
+na_table <- data.frame(Column = names(na_counts), NA_Count = na_counts, Percentage = na_percentage, row.names = NULL)
 
-# Display the result table
+# na_table <- na_table[-1,]
 na_table
 ```
+ 
+```{r}
+# Count NA values in departure delay when the arrival delay is zero
+zero_count <- sum(df$departure_delay_in_minutes == 0 & is.na(df$arrival_delay_in_minutes))
 
+zero_count
+```
+ 
+ 
+Missing values are present only for the column *arrival delay in minutes* for just a little bit more than 0.3% of the observations. We check if, as common sense might tell us, there is correlation between *departure delay in minutes.*
   
+```{r}
+correlation_dep_arr <- cor(df$departure_delay_in_minutes, df$arrival_delay_in_minutes, use = "complete.obs")
+
+correlation_dep_arr
+```
+ 
+The correlation is quite high, we then assume reasonable populationg the *arrival delay in minutes* NA using the variable *departure delay in minutes.*
+```{r}
+df$arrival_delay_in_minutes <- ifelse(is.na(df$arrival_delay_in_minutes), df$departure_delay_in_minutes, df$arrival_delay_in_minutes)
+
+
+sum(is.na(df$arrival_delay_in_minutes))
+```
+ 
+ 
+```{r}
+# Alternative df where the NA are remove instead
+df_na_deleted <- read_csv("Database/airline_passenger_satisfaction.csv")
+df_na_deleted <- na.omit(df_na_deleted)
+# df <- df_na_deleted
+```
+ 
+ 
+ 
+## Outliers analysis
+The majority of variables take values on a fixed scale.
+The variables worth checking for outliers are: *departure delay in minutes*, *arrival delay in minutes*, *flight distance*. 
+
+```{r}
+par(mfrow = c(1, 2))
+
+plot(df$departure_delay_in_minutes, main = "Departure Delay",
+     xlab = "Index", ylab = "Departure delay in minutes", col = "darkred")
+
+plot(df$arrival_delay_in_minutes, main = "Arrival Delay",
+     xlab = "Index", ylab = "Arrival delay in minutes", col = "darkgreen")
+
+```
+[...]
+ 
+```{r}
+Q1 <- quantile(df$departure_delay_in_minutes, 0.25)
+Q3 <- quantile(df$departure_delay_in_minutes, 0.75)
+IQR <- Q3 - Q1
+
+lower_threshold <- Q1 - 1.5 * IQR
+upper_threshold <- Q3 + 1.5 * IQR
+
+iqr_outliers <- df$departure_delay_in_minutes[df$departure_delay_in_minutes < Q1 - 1.5 * IQR |
+                                              df$departure_delay_in_minutes > Q3 + 1.5 * IQR]
+iqr_outlier_count <- length(iqr_outliers)
+
+c("Outliers identified with the IQR method:", iqr_outlier_count)
+c("Percentage of outliers identified:", iqr_outlier_count / length(df$departure_delay_in_minutes) * 100)
+```
+
+
+```{r}
+Q1 <- quantile(df$arrival_delay_in_minutes, 0.25)
+Q3 <- quantile(df$arrival_delay_in_minutes, 0.75)
+IQR <- Q3 - Q1
+
+lower_threshold <- Q1 - 1.5 * IQR
+upper_threshold <- Q3 + 1.5 * IQR
+
+iqr_outliers <- df$arrival_delay_in_minutes[df$arrival_delay_in_minutes < Q1 - 1.5 * IQR |
+                                              df$arrival_delay_in_minutes > Q3 + 1.5 * IQR]
+iqr_outlier_count <- length(iqr_outliers)
+
+c("Outliers identified with the IQR method:", iqr_outlier_count)
+c("Percentage of outliers identified:", iqr_outlier_count / length(df$departure_delay_in_minutes) * 100)
+```
+The IQR method does not look suitable to identify outliers because it identify almost 14% of observations as outliers.
+[For now I don't really know which method to use for identify what outliers to remove]
+
+
+
+
+
+ 
+```{r}
+plot(df$flight_distance, main = "Flight Distance",
+     xlab = "Index", ylab = "Flight distance", col = "darkblue")
+```
+[...]
+
+
+```{r}
+# plot(df$age, main = "Customers' Age",
+#     xlab = "Index", ylab = "Age")
+# Is it worth plotting age too?
+```
+
+
+## Data cleaning
+[I'm gonna remove the ...1 column because it is just an extra index column]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
