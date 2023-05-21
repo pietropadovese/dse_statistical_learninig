@@ -1,7 +1,9 @@
 ---
-title: "AIRLINE PASSENGERS SATISFACTION: CLASSIFICATION"
-output: html_notebook
-date: 16/06/2023
+title: 'AIRLINE PASSENGERS SATISFACTION: CLASSIFICATION'
+output:
+  html_document:
+    df_print: paged
+date: "16/06/2023"
 ---
 
 ## Database description
@@ -73,7 +75,7 @@ library(corrr)
 
 # 1) DATA
 ```{r}
-df <- read_csv("Database/airline_passenger_satisfaction.csv")
+df <- read_csv("dataset/airline_passenger_satisfaction.csv")
 ```
 
 ```{r}
@@ -139,7 +141,7 @@ sum(is.na(df$arrival_delay_in_minutes))
  
 ```{r}
 # Alternative df where the NA are remove instead
-df_na_deleted <- read_csv("Database/airline_passenger_satisfaction.csv")
+df_na_deleted <- read_csv("dataset/airline_passenger_satisfaction.csv")
 df_na_deleted <- na.omit(df_na_deleted)
 # df <- df_na_deleted
 ```
