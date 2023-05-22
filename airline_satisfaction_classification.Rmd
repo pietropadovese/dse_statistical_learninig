@@ -54,13 +54,15 @@ The goal of our analysis is trying to predict whether customers were overall sat
     - models selection (maybe one model per criteria if they differs)
     - models evaluation (accuracy, specificity, sensitivity, ...)
     - ROC curve
-5. **Linear Discriminant Analysis:**
-    - ...
-    - compare LDA and logistic
+5. **Linear/Quadratic Discriminant Analysis:**
+    - apply LDA
+    - apply QDA
+    - K-NN
+    - comparison between LDA, QDA, K-NN
 6. **Tree predictors:**
-    - ...
     - comparison with logistic model
 7. **Conclusion and Interpretation**
+    - compare LDA, QDA, logistic, K-NN
 
 
 ## Libraries
