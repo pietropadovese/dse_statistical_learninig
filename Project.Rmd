@@ -16,7 +16,7 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r cars}
-df <- read.csv('airline_passenger_satisfaction.csv')
+df <- read.csv('dataset\\airline_passenger_satisfaction.csv')
 head(df)
 ```
 
@@ -305,6 +305,7 @@ mean(five_nn_prediction==test_Y)
 # TREE PREDICTOR
 
 ```{r}
+library(rpart)
 # Convert the response variable to a factor
 dtrain$satisfaction <- as.factor(dtrain$satisfaction)
 dtest$satisfaction <- as.factor(dtest$satisfaction)
@@ -590,6 +591,7 @@ library(rpart.plot)
 rpart.plot(tree_model_sub)
 ```
 
+
 ```{r}
 library(ggplot2)
 
@@ -611,28 +613,27 @@ ggplot(dataaaa_sub, aes(x = Method_sub, y = Error_Rate_sub)) +
   theme_bw()
 
 ```
-```{r}
-merged_data
-```
+
 
 
 ```{r}
-dataaaa$Dataset <- "Full Dataset"  # Add a new column to specify the dataset
+
+#dataaaa$Dataset <- "Full Dataset"  # Add a new column to specify the dataset
 
 
-dataaaa_sub$Dataset <- "Subset Dataset"  # Add a new column to specify the dataset
+#dataaaa_sub$Dataset <- "Subset Dataset"  # Add a new column to specify the dataset
 
 
-colnames(dataaaa_sub)[colnames(dataaaa_sub) == "Error_Rate_sub"] <- "Error_Rate"
+#colnames(dataaaa_sub)[colnames(dataaaa_sub) == "Error_Rate_sub"] <- "Error_Rate"
 # Combine the data frames
-merged_data <- rbind(dataaaa, dataaaa_sub)
+#merged_data <- rbind(dataaaa, dataaaa_sub)
 
 # Plot the merged barplot
-ggplot(merged_data, aes(x = Method, y = Error_Rate, fill = Dataset)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  ylab("Test Error Rate") +
-  ggtitle("Barplot of Test Error Rates") +
-  theme_bw()
+#ggplot(merged_data, aes(x = Method, y = Error_Rate, fill = Dataset)) +
+  #geom_bar(stat = "identity", position = "dodge") +
+  #ylab("Test Error Rate") +
+  #ggtitle("Barplot of Test Error Rates") +
+  #theme_bw()
 
 ```
 
