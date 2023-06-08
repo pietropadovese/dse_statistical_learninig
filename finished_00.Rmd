@@ -95,24 +95,6 @@ df <- read_csv("dataset/airline_passenger_satisfaction.csv")
 ```
 
 
-The zero rating corresponds to a missing answer for that variable. For this reason
-we decided to remove the rows where a zero appears.
-
-```{r}
-# Subset the df and replace 0 with NA only in the rating variable
-
-df[df == 0] <- NA
-df <- na.omit(df)
-```
-
-
-```{r}
-head(df)
-```
-
-
-### Dataset structure
-
 Give more compact names to columns
 
 ```{r}
@@ -138,6 +120,26 @@ df <- df %>% rename(gender = Gender, cust_type = customer_type,
                     arr_delay = arrival_delay_in_minutes, 
                     sat = satisfaction)
 ```
+
+
+
+The zero rating corresponds to a missing answer for that variable. For this reason
+we decided to remove the rows where a zero appears.
+
+
+```{r}
+df_filtered <- df[!apply(df[, 8:21] == 0, 1, any), ]
+summary(df_filtered)
+```
+
+
+```{r}
+head(df)
+```
+
+
+### Dataset structure
+
 
 
 ```{r}
