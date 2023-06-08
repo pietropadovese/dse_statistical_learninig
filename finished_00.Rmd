@@ -1,0 +1,956 @@
+---
+title: "AIRLINE PASSENGERS SATISFACTION: CLASSIFICATION"
+output: html_notebook
+date: 16/06/2023
+---
+
+## Database description
+The following database contains information about airline customers, the flight they took and the results of a satisfaction questionnaire about their flight experience.
+The goal of our analysis is trying to predict whether customers were overall satisfied or not of their flight experience. **not sure about the goal of our project**
+
+## Variable description
+* ...1: Index column
+* Gender: Refers to the gender of the customer, either male or female.
+* Customer Type: Indicates whether the customer is a loyal customer (someone who frequently chooses the same airline or company) or a disloyal customer (someone who doesn't consistently choose the same airline or company).
+* Age: Represents the age of the customer.
+* Type of Travel: Specifies the purpose of the customer's travel, such as personal travel or business travel.
+* Customer Class: Indicates the class or category in which the customer traveled, such as Economy Plus or Business.
+* Flight Distance: Represents the distance traveled by the customer's flight.
+* Inflight Wi-Fi Service: Rates the satisfaction level of the customer with the inflight Wi-Fi service on a scale of 0 to 5.
+* Departure/Arrival Time Convenience: Rates the satisfaction level of the customer with the convenience of departure and arrival times on a scale of 0 to 5.
+* Ease of Online Booking: Rates the satisfaction level of the customer with the ease of booking flights online on a scale of 0 to 5.
+* Gate Location: Rates the satisfaction level of the customer with the gate location at the airport on a scale of 0 to 5.
+* Food and Drink: Rates the satisfaction level of the customer with the quality of food and drink provided on the flight on a scale of 0 to 5.
+* Online Boarding: Rates the satisfaction level of the customer with the online boarding process on a scale of 0 to 5.
+* Seat Comfort: Rates the satisfaction level of the customer with the comfort of the seats on the flight on a scale of 0 to 5.
+* Inflight Entertainment: Rates the satisfaction level of the customer with the inflight entertainment options on a scale of 0 to 5.
+* Onboard Service: Rates the satisfaction level of the customer with the service provided by the flight crew on a scale of 0 to 5.
+* Leg Room Service: Rates the satisfaction level of the customer with the legroom space on the flight on a scale of 0 to 5.
+* Baggage Handling: Rates the satisfaction level of the customer with the handling of baggage by the airline on a scale of 1 to 5.
+* Check-in Service: Rates the satisfaction level of the customer with the check-in service at the airport on a scale of 0 to 5.
+* Inflight Service: Rates the satisfaction level of the customer with the overall inflight service on a scale of 0 to 5.
+* Cleanliness: Rates the satisfaction level of the customer with the cleanliness of the aircraft on a scale of 0 to 5.
+* Departure Delay in Minutes: Specifies the number of minutes of departure delay experienced by the customer.
+* Arrival Delay in Minutes: Specifies the number of minutes of arrival delay experienced by the customer.
+* Satisfaction: Represents the overall satisfaction level of the customer with their travel experience, categorized as either "satisfied" or "neutral or dissatisfied"
+
+# OUTLINE 
+1. **Data upload**
+2. **Exploratory analysis:**
+    - missing values handling
+    - outliers analysis:
+        + IQR method
+        + 3*SD method
+    - data cleaning
+    - descriptive analysis:
+        + satisfaction distribution
+        + customers information
+        + customer-generated variables
+        + numerical variables
+    - correlation matrix
+3. **Train and test sets split**
+4. **Logistic regression:**
+    - general logistic model
+    - forward step-wise models analysis
+    - cross-validation
+    - models comparison based on R-squared, CV error, CP
+    - models selection (maybe one model per criteria if they differs)
+    - models evaluation (accuracy, specificity, sensitivity, ...)
+    - ROC curve
+5. **Linear Discriminant Analysis:**
+    - ...
+    - compare LDA and logistic
+6. **Tree predictors:**
+    - ...
+    - comparison with logistic model
+7. **Conclusion and Interpretation**
+
+
+## Libraries
+```{r}
+set.seed(123)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(corrr)
+library(ggradar)
+library(scales)
+library(tibble)
+# ggradar needs to be installed from github 
+# > install.packages("remotes")
+# > remotes::install_github("ricardo-bion/ggradar")
+```
+
+
+# **1) DATA**
+```{r}
+df <- read_csv("dataset/airline_passenger_satisfaction.csv")
+```
+
+
+The zero rating corresponds to a missing answer for that variable. For this reason
+we decided to remove the rows where a zero appears.
+
+```{r}
+df[df == 0] <- NA
+df <- na.omit(df)
+```
+
+
+```{r}
+head(df)
+```
+
+
+### Dataset structure
+
+Give more compact names to columns
+
+```{r}
+df <- df %>% rename(gender = Gender, cust_type = customer_type,
+                    trav_type = type_of_travel, 
+                    class = customer_class, 
+                    distance = flight_distance, 
+                    wifi = inflight_wifi_service, 
+                    time_conv = departure_arrival_time_convenient, 
+                    onl_book = ease_of_online_booking, 
+                    gate_loc = gate_location, 
+                    food = food_and_drink, 
+                    onl_board = online_boarding, 
+                    comfort = seat_comfort, 
+                    entert = inflight_entertainment, 
+                    onb_serv  = onboard_service, 
+                    leg_room = leg_room_service, 
+                    baggage = baggage_handling, 
+                    checkin = checkin_service, 
+                    infl_serv = inflight_service, 
+                    clean = cleanliness, 
+                    dep_delay = departure_delay_in_minutes,
+                    arr_delay = arrival_delay_in_minutes, 
+                    sat = satisfaction)
+```
+
+
+```{r}
+summary(df)
+```
+
+Remove the index column
+
+```{r}
+df <- df[-1]
+```
+
+
+# **2) EXPLANATORY ANALYSIS**
+
+The NA values have been already removed, so we can skip this part.
+
+## Handling missing values
+```{r}
+# Function that counts NA values for each column
+na_counts <- sapply(df, function(x) sum(is.na(x)))
+
+
+# Calculate the percentage of NA values for each column
+na_percentage <- na_counts / nrow(df) * 100
+
+# Display a table with NA counts and percentages
+na_table <- data.frame(Column = names(na_counts), NA_Count = na_counts, Percentage = na_percentage, row.names = NULL)
+
+# na_table <- na_table[-1,]
+na_table
+```
+ 
+```{r}
+# Count NA values in departure delay when the arrival delay is zero
+zero_count <- sum(df$dep_delay == 0 & is.na(df$arr_delay))
+
+zero_count
+```
+ 
+ 
+Missing values are present only for the column *arrival delay in minutes* for just a little bit more than 0.3% of the observations. We check if, as common sense might tell us, there is correlation between *departure delay in minutes.*
+  
+```{r}
+correlation_dep_arr <- cor(df$dep_delay, df$arr_delay, use = "complete.obs")
+
+correlation_dep_arr
+```
+ 
+We can just drop arr_delay
+
+```{r}
+df <- df %>% select(- arr_delay)
+```
+
+
+The correlation is quite high, we then assume reasonable populationg the *arrival delay in minutes* NA using the variable *departure delay in minutes.*
+```{r}
+df$arr_delay <- ifelse(is.na(df$arr_delay), df$dep_delay, df$arr_delay)
+
+
+sum(is.na(df$arr_delay))
+```
+
+
+ 
+## Outliers analysis
+The majority of variables take values on a fixed scale.
+The variables worth checking for outliers are: *departure delay in minutes*, *arrival delay in minutes*, *flight distance*. 
+
+```{r}
+par(mfrow = c(1, 2))
+
+plot(df$departure_delay_in_minutes, main = "Departure Delay",
+     xlab = "Index", ylab = "Departure delay in minutes", col = "darkred")
+
+plot(df$arrival_delay_in_minutes, main = "Arrival Delay",
+     xlab = "Index", ylab = "Arrival delay in minutes", col = "darkgreen")
+
+```
+[...]
+
+
+## Inter Quantile Range method 
+```{r}
+Q1 <- quantile(df$departure_delay_in_minutes, 0.25)
+Q3 <- quantile(df$departure_delay_in_minutes, 0.75)
+IQR <- Q3 - Q1
+
+lower_threshold <- Q1 - 1.5 * IQR
+upper_threshold <- Q3 + 1.5 * IQR
+
+iqr_outliers <- df$departure_delay_in_minutes[df$departure_delay_in_minutes < Q1 - 1.5 * IQR |
+                                              df$departure_delay_in_minutes > Q3 + 1.5 * IQR]
+iqr_outlier_count <- length(iqr_outliers)
+
+c("Outliers identified with the IQR method:", iqr_outlier_count)
+c("Percentage of outliers identified:", iqr_outlier_count / length(df$departure_delay_in_minutes) * 100)
+```
+
+
+```{r}
+Q1 <- quantile(df$arrival_delay_in_minutes, 0.25)
+Q3 <- quantile(df$arrival_delay_in_minutes, 0.75)
+IQR <- Q3 - Q1
+
+lower_threshold <- Q1 - 1.5 * IQR
+upper_threshold <- Q3 + 1.5 * IQR
+
+iqr_outliers <- df$arrival_delay_in_minutes[df$arrival_delay_in_minutes < Q1 - 1.5 * IQR |
+                                              df$arrival_delay_in_minutes > Q3 + 1.5 * IQR]
+iqr_outlier_count <- length(iqr_outliers)
+
+c("Outliers identified with the IQR method:", iqr_outlier_count)
+c("Percentage of outliers identified:", iqr_outlier_count / length(df$departure_delay_in_minutes) * 100)
+```
+The IQR method does not look suitable to identify outliers because it identify almost 14% of observations as outliers.
+[For now I don't really know which method to use for identify what outliers to remove]
+
+
+## SD method
+```{r}
+z_scores_dep <- scale(df$departure_delay_in_minutes)
+z_scores_arr <- scale(df$arrival_delay_in_minutes)
+
+outliers_dep <- which(abs(z_scores_dep) > 3)
+outliers_arr <- which(abs(z_scores_arr) > 3)
+
+sd_outliers_count_dep <- length(outliers_dep)
+sd_outliers_count_arr <- length(outliers_arr)
+
+c("Observations that falls over 3 times the sd (departure delay):", sd_outliers_count_dep)
+c("Percentage of outliers identified (departure delay):", sd_outliers_count_dep / length(df$departure_delay_in_minutes) * 100)
+
+c("Observations that falls over 3 times the sd (arrival delay):", sd_outliers_count_arr)
+c("Percentage of outliers identified (arrival delay):", sd_outliers_count_arr / length(df$arrival_delay_in_minutes) * 100)
+```
+Over 2% of the observations are identified as outliers using the standard deviation method
+
+ 
+```{r}
+plot(df$flight_distance, main = "Flight Distance",
+     xlab = "Index", ylab = "Flight distance", col = "darkblue")
+```
+[...]
+
+```{r}
+z_scores_dist <- scale(df$flight_distance)
+
+outliers_dist <- which(abs(z_scores_dist) > 3)
+
+sd_outliers_count_dist <- length(outliers_dist)
+
+c("Observations that falls over 3 times the sd (flight distance):", sd_outliers_count_dist)
+c("Percentage of outliers identified (flight distance):", sd_outliers_count_dist / length(df$flight_distance) * 100)
+```
+
+[For now I will not remove any outliers]
+
+```{r}
+# plot(df$age, main = "Customers' Age",
+#     xlab = "Index", ylab = "Age")
+# Is it worth plotting age too?
+```
+
+
+
+
+ 
+# Descriptive analysis
+
+```{r}
+p_satisf <- ggplot(df, aes(x = sat)) +
+  geom_bar(aes(fill = sat)) +
+  geom_text(aes(y = ..count.., 
+                label = paste0(round(prop.table(..count..), 4) * 100, '%')), 
+            stat = 'count', 
+            position = position_dodge(0.3), 
+            size = 4,
+            vjust = - 0.5) +
+  scale_fill_manual(values = c("red", "green")) +
+  labs(title = "Satisfaction Distribution", y = "Count")
+
+p_satisf
+```
+
+### Define function to plot bar charts
+```{r}
+# Plot bar chart function
+plot_bar_chart <- function(df, var_name) {
+  var_name <- enquo(var_name)  # Defuse the var_name so it can be evaluated later
+
+  plot_var <- ggplot(df, aes(x = !!var_name)) +  # !! to inject the var_name back to evaluate it
+    geom_bar(aes(fill = sat)) +
+    geom_text(aes(y = ..count.., 
+                  label = paste0(round(prop.table(..count..), 4) * 100, '%')), 
+              stat = 'count', 
+              position = position_dodge(0.3), 
+              size = 4,
+              vjust = -0.5) +
+    scale_fill_manual(values = c("red", "green")) +
+    labs(title = paste0("Satisfaction Distribution for ", quo_name(var_name)), 
+         x = quo_name(var_name), y = "Count")  # quo_name() to return the var_name as string
+
+  print(plot_var)
+}
+```
+
+
+### Customers information Variables
+```{r}
+# Gender
+plot_bar_chart(df, gender)
+
+# Age
+df$age_group <- cut(df$age, breaks = seq(0, max(df$age) + 10, by = 10), right = FALSE)
+plot_bar_chart(df, age_group)
+
+# Customer type
+plot_bar_chart(df, cust_type)
+
+# Type of travel
+plot_bar_chart(df, trav_type)
+
+# Customer class
+plot_bar_chart(df, class)
+```
+
+Dropping group_age because it is not needed anymore (we will only use age)
+
+```{r}
+df = df[-24]
+df
+```
+
+
+### Customer-generated variables
+
+```{r}
+# Inflight Wifi service
+plot_bar_chart(df, wifi)
+
+# Departure/arrival time convenient
+plot_bar_chart(df, time_conv)
+
+# Ease of online booking
+plot_bar_chart(df, onl_book)
+
+# Gate location
+plot_bar_chart(df, gate_loc)
+
+# Food and drink
+plot_bar_chart(df, food)
+
+# Online boarding
+plot_bar_chart(df, onl_board)
+
+# Seat comfort
+plot_bar_chart(df, comfort)
+
+# Inflight entertainment
+plot_bar_chart(df, entert)
+
+# Onboard service
+plot_bar_chart(df, onb_serv)
+
+# Leg room service
+plot_bar_chart(df, leg_room)
+
+# Baggage handling
+plot_bar_chart(df, baggage)
+
+# Check-in service
+plot_bar_chart(df, checkin)
+
+# Inflight service
+plot_bar_chart(df, infl_serv)
+
+# Cleanliness
+plot_bar_chart(df, clean)
+
+```
+
+
+### Numerical Variables
+```{r}
+# Flight distance
+p_distance <- ggplot(data = df, aes(distance, color = sat)) +
+  geom_freqpoly(binwidth = 100, linewidth = 1) +
+  scale_color_manual(values = c("red", "green")) +
+  labs(title = "Satisfaction distribution for Flight distance")
+
+# Distance density
+p_distancr_den <- ggplot(df, aes(x = distance, fill = sat)) +
+  geom_density(alpha = 0.5) + 
+  labs(title = "Density Plot of Flight distance", 
+       x = "flight_distance", y = "Density") + 
+  scale_fill_manual(values = c("red", "green"), name = "Satisfaction")
+
+grid.arrange(p_distance, p_distancr_den)
+
+# Departure delay
+# I selected delays under 200 min otherwise the graphs look even worse than these
+p_dep_del <- ggplot(data = df[df$dep_delay < 200, ], 
+                    aes(dep_delay, color = sat)) +
+  geom_freqpoly(binwidth = 15, linewidth = 0.7) +
+  scale_color_manual(values = c("red", "green")) +
+  labs(title = "Satisfaction distribution for Departure delay")
+p_dep_del
+
+# Arrival delay
+p_arr_del <- ggplot(data = df[df$arr_delay < 200, ], 
+                    aes(arr_delay, color = sat)) +
+  geom_freqpoly(binwidth = 15, linewidth = 0.7) +
+  scale_color_manual(values = c("red", "green")) +
+  labs(title = "Satisfaction distribution for Arrival distance")
+p_arr_del
+
+```
+ 
+ Not sure it the delay plot make sense. this way. 
+ 
+ **Before correlation matrix we can encode variables**
+ 
+See correlation part later. The most important conclusion from correlation matrix
+is that we can drop arrival delay
+ 
+```{r}
+df$class_Eco <- ifelse(df$class =="Eco", 1, 0)
+df$class_Eco_plus <- ifelse(df$class == "Eco Plus", 1, 0)
+df$sat <- ifelse(df$sat == "satisfied", 1, 0)
+df$gender <- ifelse(df$gender == "Male", 1, 0)
+df$cust_type <- ifelse(df$cust_type == "Loyal Customer", 1, 0)
+df$class <- ifelse(df$class == 'Eco', 1, 0)
+df$trav_type <- ifelse(df$trav_type == 'Personal Travel', 1, 0)
+df <- df %>% select(- class)
+df <- df %>% relocate(class_Eco, .after = age)
+df <- df %>% relocate(class_Eco_plus, .after = class_Eco)
+df
+```
+
+
+
+
+# Correlation matrix for the customer-generated variables
+```{r}
+correlation_matrix <- df %>% 
+  select(wifi,time_conv, 
+         onl_book, gate_loc, food, onl_board,
+         comfort, entert, onb_serv, leg_room,
+         baggage, checkin, infl_serv, clean) %>% 
+  cor()
+
+round(correlation_matrix, 3)
+```
+
+### Heatmap
+```{r}
+heatmap(correlation_matrix, 
+        col = colorRampPalette(c("blue", "white", "red"))(1000),
+        main = "Correlation Heatmap", Colv = NA, margins = c(15, 9))
+
+```
+
+
+```{r}
+library(PerformanceAnalytics)
+chart.Correlation(correlation_matrix)
+```
+
+
+```{r}
+library(corrplot)
+corrplot(cor(correlation_matrix))
+```
+
+
+## Radar map
+```{r}
+exclude_cols <- c("gender", "customer_type", "age", "type_of_travel", 
+                  "customer_class", "flight_distance", 
+                  "departure_delay_in_minutes", "arrival_delay_in_minutes") 
+                  
+
+df_mean <- df %>%
+  select(-exclude_cols) %>%
+  group_by(satisfaction) %>%
+  summarize(across(any_of(names(.)[sapply(., is.numeric) | sapply(., is.logical)]), 
+                   ~ mean(., na.rm = TRUE)))
+df_mean
+
+```
+
+```{r}
+# df_mean[, 2:15]
+
+radarchart(rbind(rep(5, 14), rep(0, 14), df_mean[, 2:15]),
+           vlabels = colnames(df_mean[, 2:15]))
+```
+
+```{r}
+ggradar(df_mean, grid.min = 0, grid.max = 5, 
+        axis.label.size = 3,
+        group.point.size = 3,
+        group.line.width = 1) +
+  theme(legend.position = c(1, 0),
+        legend.spacing = unit(c(0, 0, 0, 0), "lines"),
+        legend.key.size = unit(c(0, 0, 0, 0), "lines"),
+        legend.text = element_text(size = 7),
+        plot.margin = unit(c(2, 8, 2, 8), "lines")) +
+  scale_color_manual(values = c("red", "green"))
+```
+
+
+
+# UNSUPERVISED LEARNING
+
+Goal of this part: Use clustering to create group of customer. 
+Problem: if we use the variables as they are it's complicate to identify groups
+Solution: PCA to reduce the dimensions
+
+Drop the response variable since we are in unsupervised learning part
+
+```{r}
+df_uns <- df %>% select(- sat)
+
+```
+
+Perform PCA on the data after scaling the variables to have standard deviation one (from the book)
+```{r}
+pca <- prcomp(df_uns, scale = TRUE)
+```
+
+
+```{r}
+summary(pca)
+```
+
+Select the number of components to consider:
+
+```{r}
+pve <- 100 * pca$sdev^2 / sum(pca$sdev^2)
+par(mfrow = c(1,2))
+plot(pve, type = 'o', ylab = 'PVE', 
+     xlab = "Principal Component", col = "blue")
+plot(cumsum(pve), type = "o", ylab = "Cumulative PVE", 
+     xlab = "Principal Component", col = "brown3")
+```
+
+The first eleven components explain around 80% of the variance. Eleven is not that low
+but it's still less than half of the orignal variables. 
+
+```{r}
+# Determine number of clusters
+wss <- (nrow(df_uns)-1)*sum(apply(df_uns,2,var))
+for (i in 2:10) wss[i] <- sum(kmeans(df_uns,
+                                     centers=i)$withinss)
+plot(1:10, wss, type="b", xlab="Number of Clusters",
+     ylab="Within groups sum of squares")
+```
+
+It looks like we can use 3 cluster
+
+Perform kmeans on the first eleven components:
+(Plot them against the first two components)
+
+```{r}
+km <- kmeans(pca$x[, 1:11], 3, nstart = 20)
+plot(pca$x[,1:2], col = alpha(km$cluster + 1, 0.5), pch = 20, cex = .2)
+```
+
+Looks cool, we can add title and stuff.
+
+Add the cluster column to the original df, then plot the satisfaction rate for different clusters:
+
+```{r}
+sort(table(km$clust))
+
+clust <- names(sort(table(km$clust)))
+df$cluster = km$clust
+
+ggplot(df, aes(x=cluster)) + geom_bar(aes(fill = as.factor(sat))) + scale_fill_manual(values = c("red", "green"))
+```
+
+Group 1 is almost balanced.
+Group 2 has mostly unsatisfied. 
+Group 3 has the higher rate of satisfied. 
+
+We can study more this group to reach conclusions. 
+
+## More about PCA
+
+Not really sure what to do with this information: 
+
+```{r}
+library(factoextra)
+# Extract the results for variables
+var <- get_pca_var(pca)
+# Contributions of variables to PC1
+fviz_contrib(pca, choice = "var", axes = 1, top = 10)
+# Contributions of variables to PC2
+fviz_contrib(pca, choice = "var", axes = 2, top = 10)
+
+```
+
+
+---------------------------------------------------------------------------------------------------------------------------
+Just to show that with the original variables we cannot obtain well separated groups:
+
+##Try to use the whole dataset without dim reduction
+
+```{r}
+k <- kmeans(df_uns, 3, nstart = 25, iter.max = 1000)
+```
+
+
+
+```{r}
+k <- kmeans(df_uns, 3, nstart = 20)
+sort(table(k$clust))
+
+clust <- names(sort(table(k$clust)))
+df$cluster = k$clust
+
+ggplot(df, aes(x=cluster)) + geom_bar(aes(fill = as.factor(sat))) + scale_fill_manual(values = c("red", "green"))
+```
+
+
+
+# Giordano and Emile part
+
+Maybe we can remove all the variables over which the company does not have control
+
+Remove the cluster column:
+
+```{r}
+df <- df[-24]
+summary(df)
+```
+
+
+The encoding part has already been done above in the file
+
+```{r}
+df$class <- ifelse(df$class == "Eco Plus", "Eco", df$class) 
+df$sat <- ifelse(df$sat == "satisfied", 1, 0)
+df$gender <- ifelse(df$gender == "Male", 1, 0)
+df$cust_type <- ifelse(df$cust_type == "Loyal Customer", 1, 0)
+df$class <- ifelse(df$class == 'Eco', 1, 0)
+df$trav_type <- ifelse(df$trav_type == 'Personal Travel', 1, 0)
+```
+
+
+
+
+```{r}
+library(caret)
+
+split_train_test <- createDataPartition(df$sat, p=0.8, list=FALSE)
+dtrain <- df[split_train_test,]
+dtest <-  df[-split_train_test,]
+```
+
+
+# Logistic Model
+
+
+```{r}
+logistic_model <-glm(sat ~., data=dtrain , family="binomial" )
+
+summary <- summary (logistic_model)
+round(summary$coefficients, digits = 3)
+```
+
+
+Predict the points of the *test set* using the Logistic Model above implemented:
+```{r}
+logistic_prediction <- predict(logistic_model, dtest, type="response")
+```
+
+
+Confusion Matrix to evaluate the goodness:
+```{r}
+# Set a threshold for classification
+threshold <- 0.5
+
+# Convert the predicted probabilities (through logistic model) to binary predictions based on the threshold
+logistic_prediction_binary <- ifelse(logistic_prediction > threshold, 1, 0)
+
+# Create a table of predicted values vs. actual values
+confusion_matrix <- table(logistic_prediction_binary, dtest$sat)
+
+# Print the confusion table
+print(confusion_matrix)
+print(mean(logistic_prediction_binary==dtest$sat))
+```
+We obtained a fraction of ~91% observation of the test set correctly predicted.
+
+
+Plot the ROC Curve (https://www.displayr.com/what-is-a-roc-curve-how-to-interpret-it/)
+```{r}
+library(pROC)
+test_roc = roc(dtest$sat ~ logistic_prediction, plot = TRUE, print.auc = TRUE)
+```
+
+
+# Linear Discriminant Analysis
+
+Build the *LDA* model
+```{r}
+library(MASS)
+
+lda_model <- lda(sat~.,data = dtrain)
+lda_model
+```
+
+Plot the coefficients of LDA Model.
+```{r}
+plot(lda_model)
+```
+
+
+Predict the points of the *test set* using the *LDA Model* above implemented:
+```{r}
+lda_prediction = predict(lda_model, dtest)
+lda_class_prediction = lda_prediction$class
+# this prediction yields the class. This will be useful to compute the confusion matrix, because there we will not need the probabilities! 
+```
+
+
+Output the confusion matrix
+```{r}
+table(lda_class_prediction, dtest$sat)
+mean(lda_class_prediction==dtest$sat)
+```
+We see that we correctly predicted 90.6% of the labels of the test set.
+
+ROC for LDA
+```{r}
+lda_probabilities_prediction = lda_prediction$posterior[, "1"]  # either write 0 or 1!
+
+# given the output produced by predict() we only take the "posterior" column, which gives us the predicted probabilities [0,1] that we need to build the ROC.
+# to understand this: if you print "predict(lda_model, dtest)$posterior" we can see that we have two columns, which are complementary. So, we just need one column of them.
+
+
+
+test_roc = roc(dtest$sat ~ lda_probabilities_prediction, plot = TRUE, print.auc = TRUE)
+
+```
+
+# Quadratic Discriminant Analysis
+```{r}
+qda_model <- qda(sat~.,data = dtrain)
+qda_model
+```
+
+Predict the points of the *test set* using the *QDA Model* above implemented:
+```{r}
+qda_prediction = predict(qda_model, dtest)
+qda_class_prediction = qda_prediction$class
+```
+
+
+Output the confusion matrix
+```{r}
+table(qda_class_prediction, dtest$sat)
+mean(qda_class_prediction==dtest$sat)
+```
+
+
+Plot the ROC Curve
+```{r}
+qda_probabilities_prediction <- qda_prediction$posterior[,"1"]
+
+test_roc = roc(dtest$sat ~ qda_probabilities_prediction, plot = TRUE, print.auc = TRUE)
+```
+
+
+# knn
+
+
+```{r}
+library(class)
+
+# create Data Domain X for the TRAINING set
+train_X = dtrain[-23]
+
+# create Data Domain X for the TEST set
+test_X= dtest[-23]
+
+# labels of the training set
+train_Y = dtrain$sat
+
+# labels of the test set
+test_Y = dtest$sat
+```
+
+
+```{r}
+library(ggplot2)
+
+# Define the range of k values to evaluate
+k_values <- c(1,3,5,7,9)
+
+# Initialize an empty vector to store the accuracies
+accuracies <- c()
+
+# Compute the accuracy for each k value
+for (k in k_values) {
+  knn_prediction <- knn(train_X, test_X, train_Y, k = k)
+  accuracy <- mean(knn_prediction == test_Y)
+  accuracies <- c(accuracies, accuracy)
+}
+
+# Create a data frame with the k values and accuracies
+acc_data <- data.frame(k = k_values, accuracy = accuracies)
+```
+
+
+```{r}
+# Plot the elbow plot
+ggplot(acc_data, aes(x = k, y = accuracy)) +
+  geom_line() +
+  geom_point() +
+  labs(x = "k", y = "Accuracy") +
+  ggtitle(" Accuracy for KNN")
+```
+
+
+Error Rate plot
+```{r}
+# Initialize an empty vector to store the error rates
+error_rates <- c()
+k_values <- c(1,3,5,7,9)
+
+for (i in acc_data$accuracy){
+error_rate <- 1 - i
+error_rates <- c(error_rates, error_rate)
+}
+
+
+# Create a data frame with the k values and error rates
+err_data <- data.frame(k = k_values, error_rate = error_rates)
+
+# Plot the error rate plot
+ggplot(err_data, aes(x = k, y = error_rate)) +
+  geom_line() +
+  geom_point() +
+  labs(x = "k", y = "Error Rate") +
+  ggtitle("Error Rate Plot for KNN")
+
+```
+*WE CHOOSE K=5*
+
+in the following chunk, we add prob=TRUE because we need the estimated probabilities to build the ROC later on.
+
+```{r}
+five_nn_prediction <- knn(train_X, test_X, train_Y, k = 5, prob=TRUE)
+```
+
+
+```{r}
+confusion_matrix_knn <- table(test_Y, five_nn_prediction)
+confusion_matrix_knn
+
+mean(five_nn_prediction==test_Y)
+```
+
+# TREE PREDICTOR
+
+```{r}
+library(rpart)
+# Convert the response variable to a factor
+dtrain$sat <- as.factor(dtrain$sat)
+dtest$sat <- as.factor(dtest$sat)
+
+# Train the rpart model
+tree_model <- rpart(sat ~ ., data = dtrain)
+```
+
+
+```{r}
+# Make predictions on the test set
+predictions <- predict(tree_model, newdata = dtest, type = "class")
+
+```
+
+
+```{r}
+accuracy <- sum(predictions == dtest$sat) / nrow(dtest) * 100
+
+# Print the accuracy
+cat("Accuracy: ", accuracy, "%\n")
+```
+
+```{r}
+library(rpart.plot)
+rpart.plot(tree_model)
+```
+
+
+
+```{r}
+library(ggplot2)
+
+# Calculate test error rates
+error_logreg <- mean(logistic_prediction_binary != test_Y)
+error_lda <- mean(lda_class_prediction != test_Y)
+error_qda <- mean(qda_class_prediction != test_Y)
+error_5nn <- mean(five_nn_prediction != test_Y)
+error_tree <- mean(predictions != test_Y)
+# Create a data frame with method and error rate information
+dataaaa <- data.frame(Method = c("Logistic Regression", "LDA", "QDA", "5-NN","TREE"),
+                   Error_Rate = c(error_logreg, error_lda, error_qda, error_5nn, error_tree))
+
+# Plot barplot
+ggplot(dataaaa, aes(x = Method, y = Error_Rate)) +
+  geom_bar(stat = "identity", fill = "Red") +
+  ylab("Test Error Rate") +
+  ggtitle("Barplot of Test Error Rates") +
+  theme_bw()
+
+```
