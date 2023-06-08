@@ -4,9 +4,11 @@ output: html_notebook
 date: 16/06/2023
 ---
 
-## Database description
+## Database description 
 The following database contains information about airline customers, the flight they took and the results of a satisfaction questionnaire about their flight experience.
 The goal of our analysis is trying to predict whether customers were overall satisfied or not of their flight experience. **not sure about the goal of our project**
+
+
 
 ## Variable description
 * ...1: Index column
@@ -33,6 +35,9 @@ The goal of our analysis is trying to predict whether customers were overall sat
 * Departure Delay in Minutes: Specifies the number of minutes of departure delay experienced by the customer.
 * Arrival Delay in Minutes: Specifies the number of minutes of arrival delay experienced by the customer.
 * Satisfaction: Represents the overall satisfaction level of the customer with their travel experience, categorized as either "satisfied" or "neutral or dissatisfied"
+
+
+**Rewrite the outline**
 
 # OUTLINE 
 1. **Data upload**
@@ -66,7 +71,7 @@ The goal of our analysis is trying to predict whether customers were overall sat
 7. **Conclusion and Interpretation**
 
 
-## Libraries
+## Libraries **Put all the libraries used here**
 ```{r}
 set.seed(123)
 library(tidyverse)
@@ -94,6 +99,8 @@ The zero rating corresponds to a missing answer for that variable. For this reas
 we decided to remove the rows where a zero appears.
 
 ```{r}
+# Subset the df and replace 0 with NA only in the rating variable
+
 df[df == 0] <- NA
 df <- na.omit(df)
 ```
@@ -183,17 +190,11 @@ correlation_dep_arr
 We can just drop arr_delay
 
 ```{r}
-df <- df %>% select(- arr_delay)
+df <- df %>% select(- dep_delay)
 ```
 
 
 The correlation is quite high, we then assume reasonable populationg the *arrival delay in minutes* NA using the variable *departure delay in minutes.*
-```{r}
-df$arr_delay <- ifelse(is.na(df$arr_delay), df$dep_delay, df$arr_delay)
-
-
-sum(is.na(df$arr_delay))
-```
 
 
  
@@ -359,10 +360,15 @@ plot_bar_chart(df, trav_type)
 plot_bar_chart(df, class)
 ```
 
+
+```{r}
+summary(df)
+```
+
 Dropping group_age because it is not needed anymore (we will only use age)
 
 ```{r}
-df = df[-24]
+df <- df%>% select(-age_group)
 df
 ```
 
@@ -415,6 +421,11 @@ plot_bar_chart(df, clean)
 ```
 
 
+```{r}
+summary(df)
+```
+
+
 ### Numerical Variables
 ```{r}
 # Flight distance
@@ -451,8 +462,6 @@ p_arr_del
 
 ```
  
- Not sure it the delay plot make sense. this way. 
- 
  **Before correlation matrix we can encode variables**
  
 See correlation part later. The most important conclusion from correlation matrix
@@ -472,7 +481,7 @@ df <- df %>% relocate(class_Eco_plus, .after = class_Eco)
 df
 ```
 
-
+**Insert giordano and emile correlation matrix:**
 
 
 # Correlation matrix for the customer-generated variables
@@ -554,10 +563,15 @@ Solution: PCA to reduce the dimensions
 
 Drop the response variable since we are in unsupervised learning part
 
+
 ```{r}
 df_uns <- df %>% select(- sat)
-
 ```
+
+```{r}
+summary(df_uns)
+```
+
 
 Perform PCA on the data after scaling the variables to have standard deviation one (from the book)
 ```{r}
@@ -658,7 +672,7 @@ df$cluster = k$clust
 ggplot(df, aes(x=cluster)) + geom_bar(aes(fill = as.factor(sat))) + scale_fill_manual(values = c("red", "green"))
 ```
 
-
+--------------------------------------------------------------------------------------------------------------------------------------
 
 # Giordano and Emile part
 
@@ -667,21 +681,15 @@ Maybe we can remove all the variables over which the company does not have contr
 Remove the cluster column:
 
 ```{r}
-df <- df[-24]
 summary(df)
 ```
 
 
-The encoding part has already been done above in the file
-
 ```{r}
-df$class <- ifelse(df$class == "Eco Plus", "Eco", df$class) 
-df$sat <- ifelse(df$sat == "satisfied", 1, 0)
-df$gender <- ifelse(df$gender == "Male", 1, 0)
-df$cust_type <- ifelse(df$cust_type == "Loyal Customer", 1, 0)
-df$class <- ifelse(df$class == 'Eco', 1, 0)
-df$trav_type <- ifelse(df$trav_type == 'Personal Travel', 1, 0)
+df <- df %>% select(-cluster)
+summary(df)
 ```
+
 
 
 
@@ -727,6 +735,7 @@ confusion_matrix <- table(logistic_prediction_binary, dtest$sat)
 print(confusion_matrix)
 print(mean(logistic_prediction_binary==dtest$sat))
 ```
+
 We obtained a fraction of ~91% observation of the test set correctly predicted.
 
 
@@ -747,7 +756,7 @@ lda_model <- lda(sat~.,data = dtrain)
 lda_model
 ```
 
-Plot the coefficients of LDA Model.
+Plot the coefficients of LDA Model. (remove it?)
 ```{r}
 plot(lda_model)
 ```
@@ -883,12 +892,12 @@ ggplot(err_data, aes(x = k, y = error_rate)) +
   ggtitle("Error Rate Plot for KNN")
 
 ```
-*WE CHOOSE K=5*
+*WE CHOOSE K=7*
 
 in the following chunk, we add prob=TRUE because we need the estimated probabilities to build the ROC later on.
 
 ```{r}
-five_nn_prediction <- knn(train_X, test_X, train_Y, k = 5, prob=TRUE)
+five_nn_prediction <- knn(train_X, test_X, train_Y, k = 7, prob=TRUE)
 ```
 
 
@@ -934,7 +943,6 @@ rpart.plot(tree_model)
 
 
 ```{r}
-library(ggplot2)
 
 # Calculate test error rates
 error_logreg <- mean(logistic_prediction_binary != test_Y)
