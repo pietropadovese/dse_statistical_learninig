@@ -1,12 +1,18 @@
 ---
-title: "AIRLINE PASSENGERS SATISFACTION: CLASSIFICATION"
-output: html_notebook
-date: 16/06/2023
+title: 'AIRLINE PASSENGERS SATISFACTION: CLASSIFICATION'
+output:
+  html_document:
+    df_print: paged
+date: "16/06/2023"
 ---
 
-## Database description 
-The following database contains information about airline customers, the flight they took and the results of a satisfaction questionnaire about their flight experience.
-The goal of our analysis is trying to predict whether customers were overall satisfied or not of their flight experience. **not sure about the goal of our project**
+# Project description 
+For our project we decided to analyze the "airlines customer satisfaction" dataset available on kaggle. This dataset contains information on passangers who have already flown with the airline that provided this data. These cover general characteristics of the passenger (age, gender, etc.), and of the type of flight (distance, class, etc.), feedback on different aspects of the experience the customers had, as well as their level of satisfaction in general.
+
+As the goal of our work, we tried to extract insights that might be of interest to the company that owns the data in order to improve their service and strategy. With this idea, we structured the analysis in this way: 
+1) Exploratory data analysis, to understand and visualize the data provided; 
+2) Customer segmentation, in order to identify their different characteristics and enable the company to better target its efforts; 
+3) Creation of a model to predict whether or not a passenger will be satisfied given the variables examined
 
 
 
@@ -35,6 +41,7 @@ The goal of our analysis is trying to predict whether customers were overall sat
 * Departure Delay in Minutes: Specifies the number of minutes of departure delay experienced by the customer.
 * Arrival Delay in Minutes: Specifies the number of minutes of arrival delay experienced by the customer.
 * Satisfaction: Represents the overall satisfaction level of the customer with their travel experience, categorized as either "satisfied" or "neutral or dissatisfied"
+
 
 
 **Rewrite the outline**
@@ -71,8 +78,9 @@ The goal of our analysis is trying to predict whether customers were overall sat
 7. **Conclusion and Interpretation**
 
 
-## Libraries **Put all the libraries used here**
-```{r}
+## Libraries
+
+```{r, results = FALSE}
 set.seed(123)
 library(tidyverse)
 library(dplyr)
@@ -83,19 +91,18 @@ library(corrr)
 library(ggradar)
 library(scales)
 library(tibble)
-# ggradar needs to be installed from github 
-# > install.packages("remotes")
-# > remotes::install_github("ricardo-bion/ggradar")
+
 ```
 
 
 # **1) DATA**
-```{r}
+
+```{r, results = FALSE}
 df <- read_csv("dataset/airline_passenger_satisfaction.csv")
 ```
 
 
-Give more compact names to columns
+Give more compact names to columns:
 
 ```{r}
 df <- df %>% rename(gender = Gender, cust_type = customer_type,
@@ -123,8 +130,7 @@ df <- df %>% rename(gender = Gender, cust_type = customer_type,
 
 
 
-The zero rating corresponds to a missing answer for that variable. For this reason
-we decided to remove the rows where a zero appears.
+The zero rating corresponds to a missing answer for that variable. For this reason we decided to remove the rows where a zero appears.
 
 
 ```{r}
@@ -132,13 +138,6 @@ df_filtered <- df[!apply(df[, 8:21] == 0, 1, any), ]
 summary(df_filtered)
 ```
 
-
-```{r}
-head(df)
-```
-
-
-### Dataset structure
 
 
 
@@ -155,7 +154,6 @@ df <- df[-1]
 
 # **2) EXPLANATORY ANALYSIS**
 
-The NA values have been already removed, so we can skip this part.
 
 ## Handling missing values
 ```{r}
@@ -173,6 +171,8 @@ na_table <- data.frame(Column = names(na_counts), NA_Count = na_counts, Percenta
 na_table
 ```
  
+
+ 
 ```{r}
 # Count NA values in departure delay when the arrival delay is zero
 zero_count <- sum(df$dep_delay == 0 & is.na(df$arr_delay))
@@ -189,14 +189,11 @@ correlation_dep_arr <- cor(df$dep_delay, df$arr_delay, use = "complete.obs")
 correlation_dep_arr
 ```
  
-We can just drop arr_delay
+Given the high correlation we decided to drop the arr_delay column and remove in this way the NaN Value. 
 
 ```{r}
 df <- df %>% select(- dep_delay)
 ```
-
-
-The correlation is quite high, we then assume reasonable populationg the *arrival delay in minutes* NA using the variable *departure delay in minutes.*
 
 
  
@@ -303,7 +300,7 @@ c("Percentage of outliers identified (flight distance):", sd_outliers_count_dist
 
 
  
-# Descriptive analysis
+## Descriptive analysis
 
 ```{r}
 p_satisf <- ggplot(df, aes(x = sat)) +
@@ -363,9 +360,6 @@ plot_bar_chart(df, class)
 ```
 
 
-```{r}
-summary(df)
-```
 
 Dropping group_age because it is not needed anymore (we will only use age)
 
@@ -423,9 +417,6 @@ plot_bar_chart(df, clean)
 ```
 
 
-```{r}
-summary(df)
-```
 
 
 ### Numerical Variables
@@ -464,10 +455,9 @@ p_arr_del
 
 ```
  
- **Before correlation matrix we can encode variables**
+### Correlation matrix
  
-See correlation part later. The most important conclusion from correlation matrix
-is that we can drop arrival delay
+To display the correlation matrix we first encoded the variables with one-hot encoding.
  
 ```{r}
 df$class_Eco <- ifelse(df$class =="Eco", 1, 0)
@@ -557,25 +547,21 @@ ggradar(df_mean, grid.min = 0, grid.max = 5,
 
 
 
-# UNSUPERVISED LEARNING
+# CUSTOMER SEGMENTATION
 
-Goal of this part: Use clustering to create group of customer. 
-Problem: if we use the variables as they are it's complicate to identify groups
-Solution: PCA to reduce the dimensions
+The goal of this part was to use the k-means method to identify different clusters of passengers. Using the original data, however, we noticed that it is complicated to separate consumers into identifiable groups, so before proceeding with k-means, we transformed the data with PCA in order to reduce the number of dimensions, eliminate possible noise in the data, and generally make clustering operations easier. 
 
-Drop the response variable since we are in unsupervised learning part
+
+Drop the response variable.
 
 
 ```{r}
 df_uns <- df %>% select(- sat)
 ```
 
-```{r}
-summary(df_uns)
-```
 
+Perform PCA on the data after scaling the variables to have standard deviation one
 
-Perform PCA on the data after scaling the variables to have standard deviation one (from the book)
 ```{r}
 pca <- prcomp(df_uns, scale = TRUE)
 ```
@@ -585,7 +571,9 @@ pca <- prcomp(df_uns, scale = TRUE)
 summary(pca)
 ```
 
-Select the number of components to consider:
+
+Already from this summary we can see that to have an explained variance around at least 80% you need the first eleven components. To confirm this, we also used the elbow method. 
+
 
 ```{r}
 pve <- 100 * pca$sdev^2 / sum(pca$sdev^2)
@@ -596,8 +584,9 @@ plot(cumsum(pve), type = "o", ylab = "Cumulative PVE",
      xlab = "Principal Component", col = "brown3")
 ```
 
-The first eleven components explain around 80% of the variance. Eleven is not that low
-but it's still less than half of the orignal variables. 
+
+The next step is to determine the optimal number of clusters. 
+
 
 ```{r}
 # Determine number of clusters
@@ -608,73 +597,32 @@ plot(1:10, wss, type="b", xlab="Number of Clusters",
      ylab="Within groups sum of squares")
 ```
 
-It looks like we can use 3 cluster
+From the graph it seems that we can choose a number of clusters equal to 3.
 
-Perform kmeans on the first eleven components:
-(Plot them against the first two components)
+Now that we have selected our hyperparameters, we can apply k-means on the first eleven components of the PCA. 
 
 ```{r}
 km <- kmeans(pca$x[, 1:11], 3, nstart = 20)
 plot(pca$x[,1:2], col = alpha(km$cluster + 1, 0.5), pch = 20, cex = .2)
 ```
 
-Looks cool, we can add title and stuff.
+
+Now that we have grouped the passengers into the different groups, we can take a closer look to them. 
 
 Add the cluster column to the original df, then plot the satisfaction rate for different clusters:
 
 ```{r}
-sort(table(km$clust))
-
 clust <- names(sort(table(km$clust)))
 df$cluster = km$clust
 
 ggplot(df, aes(x=cluster)) + geom_bar(aes(fill = as.factor(sat))) + scale_fill_manual(values = c("red", "green"))
 ```
 
-Group 1 is almost balanced.
-Group 2 has mostly unsatisfied. 
-Group 3 has the higher rate of satisfied. 
-
-We can study more this group to reach conclusions. 
-
-## More about PCA
-
-Not really sure what to do with this information: 
-
-```{r}
-library(factoextra)
-# Extract the results for variables
-var <- get_pca_var(pca)
-# Contributions of variables to PC1
-fviz_contrib(pca, choice = "var", axes = 1, top = 10)
-# Contributions of variables to PC2
-fviz_contrib(pca, choice = "var", axes = 2, top = 10)
-
-```
-
-
----------------------------------------------------------------------------------------------------------------------------
-Just to show that with the original variables we cannot obtain well separated groups:
-
-##Try to use the whole dataset without dim reduction
-
-```{r}
-k <- kmeans(df_uns, 3, nstart = 25, iter.max = 1000)
-```
+Taking into consideration the percentage of satisfied passengers in each group we note that this varies considerably. It may therefore be useful for the company to analyze what causes this marked difference. 
 
 
 
-```{r}
-k <- kmeans(df_uns, 3, nstart = 20)
-sort(table(k$clust))
 
-clust <- names(sort(table(k$clust)))
-df$cluster = k$clust
-
-ggplot(df, aes(x=cluster)) + geom_bar(aes(fill = as.factor(sat))) + scale_fill_manual(values = c("red", "green"))
-```
-
---------------------------------------------------------------------------------------------------------------------------------------
 
 # Giordano and Emile part
 
