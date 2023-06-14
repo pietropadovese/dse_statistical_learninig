@@ -91,7 +91,6 @@ library(corrr)
 library(ggradar)
 library(scales)
 library(tibble)
-library(caret)
 
 ```
 
@@ -143,7 +142,7 @@ summary(df_filtered)
 
 
 ```{r}
-df <- df_filtered 
+summary(df)
 ```
 
 Remove the index column
@@ -193,7 +192,7 @@ correlation_dep_arr
 Given the high correlation we decided to drop the arr_delay column and remove in this way the NaN Value. 
 
 ```{r}
-df <- df %>% select(- arr_delay)
+df <- df %>% select(- dep_delay)
 ```
 
 
@@ -203,7 +202,12 @@ The majority of variables take values on a fixed scale.
 The variables worth checking for outliers are: *departure delay in minutes*, *arrival delay in minutes*, *flight distance*. 
 
 ```{r}
-plot(df$arr_delay, main = "Arrival Delay",
+par(mfrow = c(1, 2))
+
+plot(df$departure_delay_in_minutes, main = "Departure Delay",
+     xlab = "Index", ylab = "Departure delay in minutes", col = "darkred")
+
+plot(df$arrival_delay_in_minutes, main = "Arrival Delay",
      xlab = "Index", ylab = "Arrival delay in minutes", col = "darkgreen")
 
 ```
@@ -441,6 +445,14 @@ p_dep_del <- ggplot(data = df[df$dep_delay < 200, ],
   labs(title = "Satisfaction distribution for Departure delay")
 p_dep_del
 
+# Arrival delay
+p_arr_del <- ggplot(data = df[df$arr_delay < 200, ], 
+                    aes(arr_delay, color = sat)) +
+  geom_freqpoly(binwidth = 15, linewidth = 0.7) +
+  scale_color_manual(values = c("red", "green")) +
+  labs(title = "Satisfaction distribution for Arrival distance")
+p_arr_del
+
 ```
  
 ### Correlation matrix
@@ -461,16 +473,34 @@ df <- df %>% relocate(class_Eco_plus, .after = class_Eco)
 df
 ```
 
+**Insert giordano and emile correlation matrix:**
 
-# Correlation matrix
 
+# Correlation matrix for the customer-generated variables
 ```{r}
-correlation_matrix <- df %>%
+correlation_matrix <- df %>% 
+  select(wifi,time_conv, 
+         onl_book, gate_loc, food, onl_board,
+         comfort, entert, onb_serv, leg_room,
+         baggage, checkin, infl_serv, clean) %>% 
   cor()
 
 round(correlation_matrix, 3)
 ```
 
+### Heatmap
+```{r}
+heatmap(correlation_matrix, 
+        col = colorRampPalette(c("blue", "white", "red"))(1000),
+        main = "Correlation Heatmap", Colv = NA, margins = c(15, 9))
+
+```
+
+
+```{r}
+library(PerformanceAnalytics)
+chart.Correlation(correlation_matrix)
+```
 
 
 ```{r}
@@ -478,6 +508,42 @@ library(corrplot)
 corrplot(cor(correlation_matrix))
 ```
 
+
+## Radar map
+```{r}
+exclude_cols <- c("gender", "customer_type", "age", "type_of_travel", 
+                  "customer_class", "flight_distance", 
+                  "departure_delay_in_minutes", "arrival_delay_in_minutes") 
+                  
+
+df_mean <- df %>%
+  select(-exclude_cols) %>%
+  group_by(satisfaction) %>%
+  summarize(across(any_of(names(.)[sapply(., is.numeric) | sapply(., is.logical)]), 
+                   ~ mean(., na.rm = TRUE)))
+df_mean
+
+```
+
+```{r}
+# df_mean[, 2:15]
+
+radarchart(rbind(rep(5, 14), rep(0, 14), df_mean[, 2:15]),
+           vlabels = colnames(df_mean[, 2:15]))
+```
+
+```{r}
+ggradar(df_mean, grid.min = 0, grid.max = 5, 
+        axis.label.size = 3,
+        group.point.size = 3,
+        group.line.width = 1) +
+  theme(legend.position = c(1, 0),
+        legend.spacing = unit(c(0, 0, 0, 0), "lines"),
+        legend.key.size = unit(c(0, 0, 0, 0), "lines"),
+        legend.text = element_text(size = 7),
+        plot.margin = unit(c(2, 8, 2, 8), "lines")) +
+  scale_color_manual(values = c("red", "green"))
+```
 
 
 
@@ -558,9 +624,15 @@ Taking into consideration the percentage of satisfied passengers in each group w
 
 
 
-# Prediction Model
+# Giordano and Emile part
+
+Maybe we can remove all the variables over which the company does not have control
 
 Remove the cluster column:
+
+```{r}
+summary(df)
+```
 
 
 ```{r}
@@ -570,7 +642,11 @@ summary(df)
 
 
 
+
+
 ```{r}
+library(caret)
+
 split_train_test <- createDataPartition(df$sat, p=0.8, list=FALSE)
 dtrain <- df[split_train_test,]
 dtest <-  df[-split_train_test,]
@@ -649,7 +725,7 @@ Output the confusion matrix
 table(lda_class_prediction, dtest$sat)
 mean(lda_class_prediction==dtest$sat)
 ```
-We see that we correctly predicted 90%% of the labels of the test set.
+We see that we correctly predicted 90.6% of the labels of the test set.
 
 ROC for LDA
 ```{r}
