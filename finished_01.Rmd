@@ -198,8 +198,8 @@ The majority of variables take values on a fixed scale.
 The variables worth checking for outliers are: *departure delay in minutes*, *arrival delay in minutes*, *flight distance*. 
 
 ```{r}
-plot(df$arr_delay, main = "Arrival Delay",
-     xlab = "Index", ylab = "Arrival delay in minutes", col = "darkgreen")
+plot(df$dep_delay, main = "Departure Delay",
+     xlab = "Index", ylab = "Departure delay in minutes", col = "darkgreen")
 
 ```
 [...]
@@ -485,11 +485,12 @@ Drop the response variable.
 
 
 ```{r}
-df_uns <- df %>% select(- sat)
+df_uns <- df %>% select(-sat)
 ```
 
 
-Perform PCA on the data after scaling the variables to have standard deviation one
+Perform PCA on the data after scaling the variables 
+
 
 ```{r}
 pca <- prcomp(df_uns, scale = TRUE)
@@ -501,8 +502,24 @@ summary(pca)
 ```
 
 
-Already from this summary we can see that to have an explained variance around at least 80% you need the first eleven components. To confirm this, we also used the elbow method. 
 
+```{r}
+fviz_eig(pca, 
+         addlabels = TRUE, 
+         choice="eigenvalue",
+         main="Figure 2",
+         ncp = 22) +
+         geom_hline(yintercept=1, 
+         linetype="dashed", 
+         color = "red") + 
+        ggtitle("Eigenvalue of each component")
+```
+
+If we only had to keep the components with an eigenvalue bigger than 1, 
+we could select the first 8 ones. 
+
+But this information is not enough, because with 8 components we are able to explain
+only 70% of the total variance. 
 
 ```{r}
 pve <- 100 * pca$sdev^2 / sum(pca$sdev^2)
@@ -513,9 +530,11 @@ plot(cumsum(pve), type = "o", ylab = "Cumulative PVE",
      xlab = "Principal Component", col = "brown3")
 ```
 
+Considering this trade-off we choose to keep the first eleven components. 
 
 
 The next step is to determine the optimal number of clusters. 
+
 
 
 ```{r}
@@ -532,7 +551,7 @@ From the graph it seems that we can choose a number of clusters equal to 3.
 Now that we have selected our hyperparameters, we can apply k-means on the first eleven components of the PCA. 
 
 ```{r}
-km <- kmeans(pca$x[, 1:12], 3, nstart = 20)
+km <- kmeans(pca$x[, 1:11], 3, nstart = 20)
 plot(pca$x[,1:2], col = alpha(km$cluster + 1, 0.5), pch = 20, cex = .2)
 ```
 
@@ -545,18 +564,25 @@ Add the cluster column to the original df, then plot the satisfaction rate for d
 clust <- names(sort(table(km$clust)))
 df$cluster = km$clust
 
-ggplot(df, aes(x=cluster)) + geom_bar(aes(fill = as.factor(sat))) + scale_fill_manual(values = c("red", "green"))
+ggplot(df, aes(x=cluster)) + geom_bar(aes(fill = as.factor(sat))) + scale_fill_manual(values = c("red", "green"), labels = c("neutral or dissatisfied", "satisfied")) +
+  labs(fill = "Satisfaction")
 ```
 
 Taking into consideration the percentage of satisfied passengers in each group we note that this varies considerably. 
 It may therefore be useful for the company to analyze what causes this difference. 
 
 
+```{r}
+aggregate(df,by=list(df$cluster),FUN=mean)
+```
+
+
 
 ```{r}
 plot_cluster <- function(var_name){
   var_name <- sym(var_name)
-  p <- ggplot(df, aes(x = !!var_name, fill = as.factor(cluster))) +  geom_bar()
+  p <- ggplot(df, aes(x = !!var_name, fill = as.factor(cluster))) +  geom_bar() + ggtitle(paste0(var_name, " by cluster")) +
+    theme(plot.title = element_text(size = 16)) + labs(fill = "Cluster")
   p
 }
 ```
@@ -593,6 +619,8 @@ split_train_test <- createDataPartition(df$sat, p=0.8, list=FALSE)
 dtrain <- df[split_train_test,]
 dtest <-  df[-split_train_test,]
 ```
+
+
 
 
 # Logistic Model
