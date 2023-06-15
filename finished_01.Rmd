@@ -49,16 +49,15 @@ As the goal of our work, we tried to extract insights that might be of interest 
 # OUTLINE 
 1. **Data upload**
 2. **Exploratory analysis:**
-    - missing values handling
-    - outliers analysis:
-        + IQR method
-        + 3*SD method
     - data cleaning
+    - missing values handling
+    - outliers analysis
     - descriptive analysis:
         + satisfaction distribution
         + customers information
-        + customer-generated variables
+        + survey rating variables
         + numerical variables
+    - encoding
     - correlation matrix
 3. **Train and test sets split**
 4. **Logistic regression:**
@@ -92,6 +91,7 @@ library(ggradar)
 library(scales)
 library(tibble)
 library(caret)
+library(factoextra)
 
 ```
 
@@ -131,7 +131,8 @@ df <- df %>% rename(gender = Gender, cust_type = customer_type,
 
 
 
-The zero rating corresponds to a missing answer for that variable. For this reason we decided to remove the rows where a zero appears.
+The zero rating corresponds to a missing answer for that variable.
+For this reason we decided to remove the rows where a zero appears.
 
 
 ```{r}
@@ -166,17 +167,7 @@ na_table <- data.frame(Column = names(na_counts), NA_Count = na_counts, Percenta
 # na_table <- na_table[-1,]
 na_table
 ```
- 
 
- 
-```{r}
-# Count NA values in departure delay when the arrival delay is zero
-zero_count <- sum(df$dep_delay == 0 & is.na(df$arr_delay))
-
-zero_count
-```
- 
- 
 Missing values are present only for the column *arrival delay in minutes* for just a little bit more than 0.3% of the observations. We check if, as common sense might tell us, there is correlation between *departure delay in minutes.*
   
 ```{r}
@@ -185,7 +176,7 @@ correlation_dep_arr <- cor(df$dep_delay, df$arr_delay, use = "complete.obs")
 correlation_dep_arr
 ```
  
-Given the high correlation we decided to drop the arr_delay column and remove in this way the NaN Value. 
+Given the high correlation we decided to drop the arr_delay column and remove in this way the NA values. 
 
 ```{r}
 df <- df %>% select(- arr_delay)
@@ -195,98 +186,49 @@ df <- df %>% select(- arr_delay)
  
 ## Outliers analysis
 The majority of variables take values on a fixed scale.
-The variables worth checking for outliers are: *departure delay in minutes*, *arrival delay in minutes*, *flight distance*. 
+The variables worth checking for outliers are: *departure delay in minutes* and *flight distance*. 
 
 ```{r}
 plot(df$dep_delay, main = "Departure Delay",
      xlab = "Index", ylab = "Departure delay in minutes", col = "darkgreen")
 
 ```
-[...]
 
-
-## Inter Quantile Range method 
+## 3*SD method
 ```{r}
-Q1 <- quantile(df$departure_delay_in_minutes, 0.25)
-Q3 <- quantile(df$departure_delay_in_minutes, 0.75)
-IQR <- Q3 - Q1
-
-lower_threshold <- Q1 - 1.5 * IQR
-upper_threshold <- Q3 + 1.5 * IQR
-
-iqr_outliers <- df$departure_delay_in_minutes[df$departure_delay_in_minutes < Q1 - 1.5 * IQR |
-                                              df$departure_delay_in_minutes > Q3 + 1.5 * IQR]
-iqr_outlier_count <- length(iqr_outliers)
-
-c("Outliers identified with the IQR method:", iqr_outlier_count)
-c("Percentage of outliers identified:", iqr_outlier_count / length(df$departure_delay_in_minutes) * 100)
-```
-
-
-```{r}
-Q1 <- quantile(df$arrival_delay_in_minutes, 0.25)
-Q3 <- quantile(df$arrival_delay_in_minutes, 0.75)
-IQR <- Q3 - Q1
-
-lower_threshold <- Q1 - 1.5 * IQR
-upper_threshold <- Q3 + 1.5 * IQR
-
-iqr_outliers <- df$arrival_delay_in_minutes[df$arrival_delay_in_minutes < Q1 - 1.5 * IQR |
-                                              df$arrival_delay_in_minutes > Q3 + 1.5 * IQR]
-iqr_outlier_count <- length(iqr_outliers)
-
-c("Outliers identified with the IQR method:", iqr_outlier_count)
-c("Percentage of outliers identified:", iqr_outlier_count / length(df$departure_delay_in_minutes) * 100)
-```
-The IQR method does not look suitable to identify outliers because it identify almost 14% of observations as outliers.
-[For now I don't really know which method to use for identify what outliers to remove]
-
-
-## SD method
-```{r}
-z_scores_dep <- scale(df$departure_delay_in_minutes)
-z_scores_arr <- scale(df$arrival_delay_in_minutes)
+z_scores_dep <- scale(df$dep_delay)
 
 outliers_dep <- which(abs(z_scores_dep) > 3)
-outliers_arr <- which(abs(z_scores_arr) > 3)
 
 sd_outliers_count_dep <- length(outliers_dep)
-sd_outliers_count_arr <- length(outliers_arr)
 
-c("Observations that falls over 3 times the sd (departure delay):", sd_outliers_count_dep)
-c("Percentage of outliers identified (departure delay):", sd_outliers_count_dep / length(df$departure_delay_in_minutes) * 100)
+cat("Observations that falls over 3 times the sd (departure delay):", sd_outliers_count_dep, "\n")
+cat("Percentage of outliers identified (departure delay):", 
+    round(sd_outliers_count_dep / length(df$dep_delay), 4) * 100, "%", "\n")
 
-c("Observations that falls over 3 times the sd (arrival delay):", sd_outliers_count_arr)
-c("Percentage of outliers identified (arrival delay):", sd_outliers_count_arr / length(df$arrival_delay_in_minutes) * 100)
 ```
-Over 2% of the observations are identified as outliers using the standard deviation method
+Over 2% of the observations are identified as outliers using the standard deviation method.
 
  
 ```{r}
-plot(df$flight_distance, main = "Flight Distance",
+plot(df$distance, main = "Flight Distance",
      xlab = "Index", ylab = "Flight distance", col = "darkblue")
 ```
-[...]
+
 
 ```{r}
-z_scores_dist <- scale(df$flight_distance)
+z_scores_dist <- scale(df$distance)
 
 outliers_dist <- which(abs(z_scores_dist) > 3)
 
 sd_outliers_count_dist <- length(outliers_dist)
 
-c("Observations that falls over 3 times the sd (flight distance):", sd_outliers_count_dist)
-c("Percentage of outliers identified (flight distance):", sd_outliers_count_dist / length(df$flight_distance) * 100)
+cat("Observations that falls over 3 times the sd (flight distance):", sd_outliers_count_dist, "\n")
+
+cat("Percentage of outliers identified (flight distance):", round(sd_outliers_count_dist / length(df$distance), 4) * 100, "%", "\n")
 ```
 
-[For now I will not remove any outliers]
-
-```{r}
-# plot(df$age, main = "Customers' Age",
-#     xlab = "Index", ylab = "Age")
-# Is it worth plotting age too?
-```
-
+We eventually decided to not remove any outliers.
 
 
 
@@ -308,7 +250,7 @@ p_satisf <- ggplot(df, aes(x = sat)) +
 p_satisf
 ```
 
-### Define function to plot bar charts
+Define a function to plot bar charts
 ```{r}
 # Plot bar chart function
 plot_bar_chart <- function(df, var_name) {
@@ -351,16 +293,14 @@ plot_bar_chart(df, class)
 ```
 
 
-
 Dropping group_age because it is not needed anymore (we will only use age)
 
 ```{r}
 df <- df%>% select(-age_group)
-df
 ```
 
 
-### Customer-generated variables
+### Survey rating variables
 
 ```{r}
 # Inflight Wifi service
@@ -417,18 +357,10 @@ p_distance <- ggplot(data = df, aes(distance, color = sat)) +
   geom_freqpoly(binwidth = 100, linewidth = 1) +
   scale_color_manual(values = c("red", "green")) +
   labs(title = "Satisfaction distribution for Flight distance")
-
-# Distance density
-p_distancr_den <- ggplot(df, aes(x = distance, fill = sat)) +
-  geom_density(alpha = 0.5) + 
-  labs(title = "Density Plot of Flight distance", 
-       x = "flight_distance", y = "Density") + 
-  scale_fill_manual(values = c("red", "green"), name = "Satisfaction")
-
-grid.arrange(p_distance, p_distancr_den)
+p_distance
 
 # Departure delay
-# I selected delays under 200 min otherwise the graphs look even worse than these
+# We selected delays under 200 min otherwise the graph look even worse than this
 p_dep_del <- ggplot(data = df[df$dep_delay < 200, ], 
                     aes(dep_delay, color = sat)) +
   geom_freqpoly(binwidth = 15, linewidth = 0.7) +
@@ -438,7 +370,7 @@ p_dep_del
 
 ```
  
-### Correlation matrix
+### Encoding
  
 To display the correlation matrix we first encoded the variables with one-hot encoding.
  
@@ -457,7 +389,7 @@ df
 ```
 
 
-# Correlation matrix
+## Correlation matrix
 
 ```{r}
 correlation_matrix <- df %>%
