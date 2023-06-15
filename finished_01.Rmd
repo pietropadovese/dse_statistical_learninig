@@ -136,15 +136,10 @@ The zero rating corresponds to a missing answer for that variable. For this reas
 
 ```{r}
 df_filtered <- df[!apply(df[, 8:21] == 0, 1, any), ]
-summary(df_filtered)
-```
-
-
-
-
-```{r}
 df <- df_filtered 
+summary(df)
 ```
+
 
 Remove the index column
 
@@ -519,6 +514,7 @@ plot(cumsum(pve), type = "o", ylab = "Cumulative PVE",
 ```
 
 
+
 The next step is to determine the optimal number of clusters. 
 
 
@@ -536,7 +532,7 @@ From the graph it seems that we can choose a number of clusters equal to 3.
 Now that we have selected our hyperparameters, we can apply k-means on the first eleven components of the PCA. 
 
 ```{r}
-km <- kmeans(pca$x[, 1:11], 3, nstart = 20)
+km <- kmeans(pca$x[, 1:12], 3, nstart = 20)
 plot(pca$x[,1:2], col = alpha(km$cluster + 1, 0.5), pch = 20, cex = .2)
 ```
 
@@ -552,8 +548,30 @@ df$cluster = km$clust
 ggplot(df, aes(x=cluster)) + geom_bar(aes(fill = as.factor(sat))) + scale_fill_manual(values = c("red", "green"))
 ```
 
-Taking into consideration the percentage of satisfied passengers in each group we note that this varies considerably. It may therefore be useful for the company to analyze what causes this marked difference. 
+Taking into consideration the percentage of satisfied passengers in each group we note that this varies considerably. 
+It may therefore be useful for the company to analyze what causes this difference. 
 
+
+
+```{r}
+plot_cluster <- function(var_name){
+  var_name <- sym(var_name)
+  p <- ggplot(df, aes(x = !!var_name, fill = as.factor(cluster))) +  geom_bar()
+  p
+}
+```
+
+
+```{r}
+xVariables <- colnames(df)[8:21]
+```
+
+
+
+```{r}
+par(mfrow = c(3, 5))
+lapply(xVariables, plot_cluster)
+```
 
 
 
