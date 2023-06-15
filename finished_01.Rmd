@@ -63,7 +63,10 @@ As the goal of our work, we tried to extract insights that might be of interest 
         + numerical variables
     - encoding
     - correlation matrix
-3. **Train and test sets split**
+3. **Unsupervised Learning**
+    - PCA
+    - Optimal number of clusters
+    - K-means
 4. **Logistic regression:**
     - general logistic model
     - forward step-wise models analysis
