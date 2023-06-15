@@ -6,6 +6,10 @@ output:
 date: "16/06/2023"
 ---
 
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
 # Project description 
 For our project we decided to analyze the "airlines customer satisfaction" dataset available on kaggle. This dataset contains information on passangers who have already flown with the airline that provided this data. These cover general characteristics of the passenger (age, gender, etc.), and of the type of flight (distance, class, etc.), feedback on different aspects of the experience the customers had, as well as their level of satisfaction in general.
 
@@ -79,7 +83,7 @@ As the goal of our work, we tried to extract insights that might be of interest 
 
 ## Libraries
 
-```{r, results = FALSE}
+```{r, results = FALSE, warnings = FALSE}
 set.seed(123)
 library(tidyverse)
 library(dplyr)
@@ -98,7 +102,7 @@ library(factoextra)
 
 # **1) DATA**
 
-```{r, results = FALSE}
+```{r, results = FALSE, warnings = FALSE}
 df <- read_csv("dataset/airline_passenger_satisfaction.csv")
 ```
 
@@ -138,7 +142,6 @@ For this reason we decided to remove the rows where a zero appears.
 ```{r}
 df_filtered <- df[!apply(df[, 8:21] == 0, 1, any), ]
 df <- df_filtered 
-summary(df)
 ```
 
 
@@ -230,12 +233,10 @@ cat("Percentage of outliers identified (flight distance):", round(sd_outliers_co
 
 We eventually decided to not remove any outliers.
 
-
-
  
 ## Descriptive analysis
 
-```{r}
+```{r, warnings = FALSE}
 p_satisf <- ggplot(df, aes(x = sat)) +
   geom_bar(aes(fill = sat)) +
   geom_text(aes(y = ..count.., 
@@ -541,7 +542,6 @@ Remove the cluster column:
 
 ```{r}
 df <- df %>% select(-cluster)
-summary(df)
 ```
 
 
@@ -608,7 +608,7 @@ lda_model <- lda(sat~.,data = dtrain)
 lda_model
 ```
 
-Plot the coefficients of LDA Model. (remove it?)
+Plot the coefficients of LDA Model. 
 ```{r}
 plot(lda_model)
 ```
@@ -618,7 +618,6 @@ Predict the points of the *test set* using the *LDA Model* above implemented:
 ```{r}
 lda_prediction = predict(lda_model, dtest)
 lda_class_prediction = lda_prediction$class
-# this prediction yields the class. This will be useful to compute the confusion matrix, because there we will not need the probabilities! 
 ```
 
 
@@ -744,12 +743,12 @@ ggplot(err_data, aes(x = k, y = error_rate)) +
   ggtitle("Error Rate Plot for KNN")
 
 ```
-*WE CHOOSE K=7*
+*WE CHOOSE K=5*
 
 in the following chunk, we add prob=TRUE because we need the estimated probabilities to build the ROC later on.
 
 ```{r}
-five_nn_prediction <- knn(train_X, test_X, train_Y, k = 7, prob=TRUE)
+five_nn_prediction <- knn(train_X, test_X, train_Y, k = 5, prob=TRUE)
 ```
 
 
