@@ -68,20 +68,14 @@ As the goal of our work, we tried to extract insights that might be of interest 
     - Optimal number of clusters
     - K-means
 4. **Logistic regression:**
-    - general logistic model
-    - forward step-wise models analysis
-    - cross-validation
-    - models comparison based on R-squared, CV error, CP
-    - models selection (maybe one model per criteria if they differs)
-    - models evaluation (accuracy, specificity, sensitivity, ...)
-    - ROC curve
+
 5. **Linear Discriminant Analysis:**
-    - ...
-    - compare LDA and logistic
-6. **Tree predictors:**
-    - ...
-    - comparison with logistic model
-7. **Conclusion and Interpretation**
+
+6. **k-NN**
+
+7. **Tree predictors:**
+
+
 
 
 ## Libraries
@@ -514,30 +508,6 @@ aggregate(df,by=list(df$cluster),FUN=mean)
 
 
 
-```{r}
-plot_cluster <- function(var_name){
-  var_name <- sym(var_name)
-  p <- ggplot(df, aes(x = !!var_name, fill = as.factor(cluster))) +  geom_bar() + ggtitle(paste0(var_name, " by cluster")) +
-    theme(plot.title = element_text(size = 16)) + labs(fill = "Cluster")
-  p
-}
-```
-
-
-```{r}
-xVariables <- colnames(df)[8:21]
-```
-
-
-
-```{r}
-par(mfrow = c(3, 5))
-lapply(xVariables, plot_cluster)
-```
-
-
-
-
 # Prediction Model
 
 Remove the cluster column:
@@ -591,10 +561,10 @@ print(confusion_matrix)
 print(mean(logistic_prediction_binary==dtest$sat))
 ```
 
-We obtained a fraction of ~91% observation of the test set correctly predicted.
+We obtained a fraction of ~90% observation of the test set correctly predicted.
 
 
-Plot the ROC Curve (https://www.displayr.com/what-is-a-roc-curve-how-to-interpret-it/)
+Plot the ROC Curve
 ```{r}
 library(pROC)
 test_roc = roc(dtest$sat ~ logistic_prediction, plot = TRUE, print.auc = TRUE)
@@ -629,7 +599,7 @@ Output the confusion matrix
 table(lda_class_prediction, dtest$sat)
 mean(lda_class_prediction==dtest$sat)
 ```
-We see that we correctly predicted 90%% of the labels of the test set.
+We see that we correctly predicted 89% of the labels of the test set.
 
 ROC for LDA
 ```{r}
@@ -672,7 +642,7 @@ test_roc = roc(dtest$sat ~ qda_probabilities_prediction, plot = TRUE, print.auc 
 ```
 
 
-# knn
+# k-NN
 
 
 ```{r}
@@ -762,7 +732,7 @@ confusion_matrix_knn
 mean(five_nn_prediction==test_Y)
 ```
 
-# TREE PREDICTOR
+# Tree predictor
 
 ```{r}
 library(rpart)
